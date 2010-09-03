@@ -1,0 +1,1 @@
+A simple tool that reads in paths from an svg document (I generate mine using Inkscape, and save as plain svg), and outputs a basic html image map. 
