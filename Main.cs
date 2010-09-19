@@ -8,26 +8,48 @@ namespace ImageMapFromSvg
 {
 	class MainClass
 	{
+		public enum FormatStyle {
+			Map,
+			Json
+		}
+		
+		static FormatStyle style = FormatStyle.Json;
+		
 		public static void Main (string[] args)
 		{
 			string filename = args[0];
+			Console.WriteLine ("loading map data from file " + filename);
 			
-			Console.WriteLine (	"loading map data from file " + filename);
+			XmlDocument doc = new XmlDocument ();
+			doc.Load (filename);
 			
-			XmlDocument doc = new XmlDocument();
-			doc.Load(filename);
+			XmlNamespaceManager nsmgr = new XmlNamespaceManager (doc.NameTable);
+			nsmgr.AddNamespace ("x", doc.DocumentElement.NamespaceURI);
 			
-			XmlNamespaceManager nsmgr = new XmlNamespaceManager(doc.NameTable);
-			nsmgr.AddNamespace("x", doc.DocumentElement.NamespaceURI);
-			
-			Console.WriteLine ("<map>");
-			
-			foreach(XmlNode node in doc.SelectNodes("//x:path", nsmgr) )
+			if (style == FormatStyle.Json)
 			{
-				var d = node.Attributes["d"].InnerText.Split(' ');
-				Console.WriteLine ("<area title='{0}' shape='poly' coords='{1}'></area>", node.Attributes["id"].InnerText, BuildCoords(d) );
+				Console.WriteLine ("[");
+				bool first = true;
+				foreach (XmlNode node in doc.SelectNodes ("//x:path", nsmgr)) {
+					var d = node.Attributes["d"].InnerText.Split (' ');
+					var id = node.Attributes["id"].InnerText;
+					Console.WriteLine ("{2}{{\"id\":\"{0}\", \"points\" : [{1}]}}", id, BuildCoords (d), first ? "" : ",");
+					first = false;
+					//Console.WriteLine ("<area title='{0}' shape='poly' coords='{1}'></area>",, BuildCoords (d));
+				}
+				Console.WriteLine ("]");
 			}
-			Console.WriteLine ("</map>");
+			else
+			{
+				Console.WriteLine ("<map>");
+				
+				foreach (XmlNode node in doc.SelectNodes ("//x:path", nsmgr)) {
+					var d = node.Attributes["d"].InnerText.Split (' ');
+					Console.WriteLine ("<area title='{0}' shape='poly' coords='{1}'></area>", node.Attributes["id"].InnerText, BuildCoords (d));
+				}
+				Console.WriteLine ("</map>");
+			}
+			
 		}
 		
 		public static string BuildCoords( string[] coords )
@@ -66,9 +88,12 @@ namespace ImageMapFromSvg
 			return result.ToString();
 		}
 		
-		private static string PrintPoint(Point p, bool trailComma)
+		private static string PrintPoint (Point p, bool trailComma)
 		{
-			return string.Format("{0},{1}{2}", p.X,p.Y, trailComma ? ", " : "");
+			if (style == FormatStyle.Json)
+				return string.Format ("{{\"x\":{0},\"y\":{1}}}{2}", p.X, p.Y, trailComma ? ", " : "");
+			else
+				return string.Format("{0},{1}{2}", p.X,p.Y, trailComma ? ", " : "");
 		}
 		
 		private static Point PointFromString( string input )
